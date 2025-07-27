@@ -1,6 +1,8 @@
+import { genSalt } from "bcryptjs";
+import bcrypt from "bcryptjs/umd/types";
 import mongoose from "mongoose"
 
-export interface User extends Document {
+export interface IUser extends Document {
     _id: mongoose.Types.ObjectId;
     firstName: string;
     lastName: string;
@@ -27,9 +29,11 @@ export interface User extends Document {
     },
     createdAt: Date;
     updatedAt: Date;
+    comparePassword(candidatePassword: string): Promise<boolean>;
+    getFullName(): string;
 }
 
-const userSchema = new mongoose.Schema<User>({
+const userSchema = new mongoose.Schema<IUser>({
     firstName: {
         type: String,
         required: [true, 'First Name is required'],
@@ -128,3 +132,32 @@ userSchema.index({ isActive: 1 });
 userSchema.virtual('fullname').get(function () {
     return `${this.firstName} ${this.lastName}`
 })
+
+//hashing the password before saving
+userSchema.pre('save', async function (next) {
+    if (!this.isModified('password')) return next()
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+    next()
+})
+
+// Compare password method
+userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+    return bcrypt.compare(candidatePassword, this.password)
+}
+
+//get fullname method
+
+userSchema.methods.getFullName = function (): string {
+    return `${this.firstName} ${this.lastName}`
+}
+
+//deleting the password to avoid sending password in reponse 
+userSchema.methods.toJSON = function () {
+    const userObject = this.toObject();  // Convert Mongoose document to plain object
+    delete userObject.password;          // Remove the password property
+    return userObject;                   // Return the cleaned object
+};
+
+export default mongoose.model<IUser>('User', userSchema)
+
