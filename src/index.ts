@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000
 //     console.log(`Body:`, req.body);
 //     next();
 // });
-
+// initializeAuth()
 app.use(express.json())
 
 app.use('/api/v1', userRoutes)
