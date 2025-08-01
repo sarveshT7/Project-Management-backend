@@ -26,7 +26,7 @@ export const getRedisClient = (): RedisClientType => {
     return redisClient
 }
 
-export const setcache = async (key: string, value: string, expiresIn: number = 3600): Promise<void> => {
+export const setCache = async (key: string, value: string, expiresIn: number = 3600): Promise<void> => {
     try {
         if (redisClient && redisClient.isOpen) {
             await redisClient.setEx(key, expiresIn, value)
