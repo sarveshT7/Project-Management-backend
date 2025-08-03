@@ -1,10 +1,12 @@
 import express from 'express';
 import dotenv from 'dotenv'
 import { connectDB } from './config/db';
-import userRoutes from './routes/user.route';
+import userRoutes from './routes/auth.route';
+import { connectRedis } from './config/redis';
 
 dotenv.config()
-connectDB()
+connectDB();
+connectRedis();
 const app = express()
 const PORT = process.env.PORT || 5000
 
