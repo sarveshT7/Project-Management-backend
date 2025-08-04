@@ -2,6 +2,7 @@ import { NextFunction, Response, Request } from "express";
 import { IUser } from "../models/user.model";
 import jwt from "jsonwebtoken";
 import User from '../models/user.model'
+import { decode } from "punycode";
 
 export interface AuthRequest extends Request {
     user?: IUser;
@@ -13,8 +14,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
         if (!token) {
             return res.status(401).json({ message: "Access token is required" })
         }
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string }
-        const user = await User.findById(decoded.id).select('+password')
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as IUser
+        console.log('decoded', decoded)
+        const user = await User.findById(decoded._id).select('+password');
+        console.log('user', user)
 
         if (!user || !user.isActive) {
             return res.status(401).json({ message: 'Invalid token or user not found' })

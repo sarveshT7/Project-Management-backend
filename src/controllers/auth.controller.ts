@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto'
 import { deleteCache, getCache, setCache } from '../config/redis';
 import { sendEmail } from '../utils/email';
+import { AuthRequest } from '../middleware/auth';
 
 // console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'EXISTS' : 'MISSING');
 // console.log('JWT_REFRESH_SECRET:', process.env.JWT_REFRESH_SECRET ? 'EXISTS' : 'MISSING');
@@ -79,10 +80,8 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
         `
         })
 
-        //generate tokens
-        const token = generateTokens(user.firstName, user.lastName, user.email, user._id.toString())
-        console.log('token', token);
-        console.log('user', user);
+
+        // console.log('user', user);
 
         if (user) {
             return res.status(201).json({
@@ -98,7 +97,6 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
                     isEmailVerified: user.isEmailVerified,
                     preferences: user.preferences
                 },
-                token
             })
         }
     } catch (error) {
@@ -118,7 +116,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
     try {
         const { token } = req.params;
         const userId = await getCache(`email_verification_${token}`)
-        console.log('user id',userId)
+        console.log('user id', userId)
 
         if (!userId) {
             return res.status(401).json({ message: "Invalid or expired verification token" })
@@ -159,7 +157,7 @@ export const reverifyEmail = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Email already verified' });
         }
         const verificationToken = crypto.randomBytes(32).toString('hex');
-        console.log('re verify verificationToken',verificationToken)
+        console.log('re verify verificationToken', verificationToken)
 
 
         // Store the token in cache (set with an expiry, e.g., 1 hour)
@@ -187,9 +185,161 @@ export const reverifyEmail = async (req: Request, res: Response) => {
     }
 }
 
-export const login = () => {
+export const login = async (req: Request, res: Response) => {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email }).select('+password');
+        if (!user) {
+            return res.status(401).json({ success: false, message: "User doesn't' exist" })
+        }
+
+        if (!user.isActive) {
+            return res.status(401).json({ message: 'Account is deactivated' })
+        }
+
+        const isPasswordVerified = await user.comparePassword(password)
+        // console.log('isPasswordVerified', isPasswordVerified)
+        // console.log('password', password)
+        if (!isPasswordVerified) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        //update the last login
+        user.lastLogin = new Date();
+        await user.save()
+
+        // //generate tokens
+        const tokens = generateTokens(user.firstName, user.lastName, user.email, user._id.toString())
+        console.log('tokens', tokens);
+
+        res.json({
+            success: true,
+            message: 'Login successful',
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role,
+                isEmailVerified: user.isEmailVerified,
+                preferences: user.preferences
+            },
+            tokens
+        });
+    } catch (error) {
+        console.log('error in login', error)
+        res.status(500).json({ message: 'Error during login' });
+    }
 
 }
+
+export const changePassword = async (req: AuthRequest, res: Response) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user!._id).select('+password');
+        if (!user) {
+            return res.status(404).json({ message: "user not found" })
+        }
+
+        //verify current password
+        const isPasswordVerified = await user.comparePassword(currentPassword);
+        if (!isPasswordVerified) {
+            return res.status(400).json({ message: "Current password is incorrect" })
+        }
+        //Update the password
+        user.password = newPassword;
+        await user.save();
+        res.json({
+            success: true,
+            message: 'Password changed successfully'
+        });
+    } catch (error) {
+        console.log('error in change pass', error)
+        return res.status(400).json({ message: "Current password is incorrect" })
+    }
+
+
+}
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" })
+        }
+
+        //generate the token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        console.log('resetToken', resetToken)
+        await setCache(`password_reset_${resetToken}`, user._id.toString(), 1800)
+
+        //send reset email
+        const resetUrl = `${process.env.Client_url}/reset-password/${resetToken}`
+        await sendEmail({
+            to: user.email,
+            subject: 'Password Reset Request',
+            html: `
+            <h1>Password Reset</h1>
+            <p>You requested a password reset. Click the link below to reset your password:</p>
+            <a href="${resetUrl}">Reset Password</a>
+            <p>This link will expire in 30 minutes.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+            `
+        })
+        res.json({ message: "Password reset link has been sent to your mail" })
+    } catch (error) {
+        console.log('error in sending reset mail', error)
+        res.status(500).json({ message: "Error sending reset mail" })
+
+    }
+}
+
+export const resetPassword = async (req: Request, res: Response) => {
+    try {
+        const { token } = req.params;
+        const { password } = req.body;
+        const userId = await getCache(`password_reset_${token}`)
+        if (!userId) {
+            return res.status(400).json({ message: 'Invalid or expired reset token' });
+        }
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        // Update password
+        user.password = password;
+        await user.save();
+
+        //delete the cache
+        await deleteCache(`password_reset_${token}`);
+
+        res.json({
+            success: true,
+            message: 'Password reset successfully'
+        });
+    } catch (error) {
+        console.log('error in resetting the password', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error in resetting the Password'
+        });
+    }
+}
+// Logout
+export const logout = async (req: AuthRequest, res: Response) => {
+    try {
+        // In a real app, you might want to blacklist the token
+        // For now, we'll just send a success response
+        res.json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error during logout', error });
+    }
+};
+
 // // In your controller file
 // const initializeAuth = () => {
 //   console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'EXISTS' : 'MISSING');
