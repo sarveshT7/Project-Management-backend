@@ -60,12 +60,12 @@ const taskSchema = new mongoose.Schema(
             required: [true, 'Project is required']
         },
         assignee: {
-            tpe: Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: 'User',
             required: [true, 'Assignee is required']
         },
         reporter: {
-            tpe: Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: 'User',
             required: [true, 'Reporter is required']
         },
