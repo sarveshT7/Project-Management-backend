@@ -1,0 +1,27 @@
+// // src/routes/settings.routes.ts
+// import { Router } from 'express';
+// import {
+//   getSettings,
+//   updateSettings,
+//   resetSettings,
+//   getNotificationSettings,
+//   updateNotificationSettings
+// } from '../controllers/settings.controller';
+// import { authenticate } from '../middleware/auth';
+// import { validate, schemas } from '../middleware/validation';
+
+// const router = Router();
+
+// // All routes require authentication
+// router.use(authenticate);
+
+// // Settings routes
+// router.get('/', getSettings);
+// router.put('/', validate(schemas.updateSettings), updateSettings);
+// router.post('/reset', resetSettings);
+
+// // Notification settings
+// router.get('/notifications', getNotificationSettings);
+// router.put('/notifications', validate(schemas.updateNotificationSettings), updateNotificationSettings);
+
+// export default router;

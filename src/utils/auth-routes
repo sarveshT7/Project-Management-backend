@@ -1,0 +1,39 @@
+// // src/routes/auth.routes.ts
+// import { Router } from 'express';
+// import { authenticate } from '../middleware/auth';
+// import { validate, schemas } from '../middleware/validation';
+
+// const router = Router();
+
+// // Note: You mentioned auth is already done, so I'm providing a basic structure
+// // You should replace these with your existing auth controller functions
+
+// // Import your auth controller functions here
+// // import { register, login, logout, forgotPassword, resetPassword, refreshToken } from '../controllers/auth.controller';
+
+// // Auth routes
+// router.post('/register', validate(schemas.register), (req, res) => {
+//   res.json({ message: 'Register endpoint - implement your existing auth logic' });
+// });
+
+// router.post('/login', validate(schemas.login), (req, res) => {
+//   res.json({ message: 'Login endpoint - implement your existing auth logic' });
+// });
+
+// router.post('/logout', authenticate, (req, res) => {
+//   res.json({ message: 'Logout endpoint - implement your existing auth logic' });
+// });
+
+// router.post('/forgot-password', (req, res) => {
+//   res.json({ message: 'Forgot password endpoint - implement your existing auth logic' });
+// });
+
+// router.post('/reset-password', (req, res) => {
+//   res.json({ message: 'Reset password endpoint - implement your existing auth logic' });
+// });
+
+// router.post('/refresh-token', (req, res) => {
+//   res.json({ message: 'Refresh token endpoint - implement your existing auth logic' });
+// });
+
+// export default router;

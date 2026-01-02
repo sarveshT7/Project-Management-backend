@@ -1,0 +1,31 @@
+// // src/routes/user.routes.ts
+// import { Router } from 'express';
+// import {
+//   getProfile,
+//   updateProfile,
+//   changePassword,
+//   getAllUsers,
+//   getUserById,
+//   deleteAccount,
+//   searchUsers
+// } from '../controllers/user.controller';
+// import { authenticate, authorize } from '../middleware/auth';
+// import { validate, validateParams, validateQuery, schemas, paramSchemas, querySchemas } from '../middleware/validation';
+
+// const router = Router();
+
+// // All routes require authentication
+// router.use(authenticate);
+
+// // User profile routes
+// router.get('/profile', getProfile);
+// router.put('/profile', validate(schemas.updateProfile), updateProfile);
+// router.put('/change-password', validate(schemas.changePassword), changePassword);
+// router.delete('/account', validate(schemas.deleteAccount), deleteAccount);
+
+// // User search and listing
+// router.get('/search', validateQuery(querySchemas.searchUsers), searchUsers);
+// router.get('/', validateQuery(querySchemas.pagination), getAllUsers);
+// router.get('/:id', validateParams(paramSchemas.objectId), getUserById);
+
+// export default router;

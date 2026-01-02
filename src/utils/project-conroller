@@ -1,0 +1,346 @@
+// // src/controllers/project.controller.ts
+// import { Request, Response } from 'express';
+// import { Project } from '../models/Project';
+// import { Task } from '../models/Task';
+// import { Team } from '../models/Team';
+// import { User } from '../models/User';
+
+// interface AuthenticatedRequest extends Request {
+//   user?: {
+//     id: string;
+//     email: string;
+//     role: string;
+//   };
+// }
+
+// export const createProject = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const { name, description, status, priority, deadline, teamId } = req.body;
+//     const userId = req.user?.id;
+
+//     const project = new Project({
+//       name,
+//       description,
+//       status: status || 'planning',
+//       priority: priority || 'medium',
+//       deadline,
+//       teamId,
+//       createdBy: userId,
+//       members: [userId],
+//       createdAt: new Date(),
+//       updatedAt: new Date()
+//     });
+
+//     await project.save();
+
+//     // Add project to team if teamId provided
+//     if (teamId) {
+//       await Team.findByIdAndUpdate(teamId, {
+//         $push: { projects: project._id }
+//       });
+//     }
+
+//     res.status(201).json({
+//       success: true,
+//       message: 'Project created successfully',
+//       data: project
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error creating project',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
+
+// export const getAllProjects = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const userId = req.user?.id;
+//     const { status, priority, page = 1, limit = 10 } = req.query;
+
+//     const filter: any = {
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ]
+//     };
+
+//     if (status) filter.status = status;
+//     if (priority) filter.priority = priority;
+
+//     const skip = (Number(page) - 1) * Number(limit);
+
+//     const projects = await Project.find(filter)
+//       .populate('createdBy', 'name email')
+//       .populate('members', 'name email')
+//       .populate('teamId', 'name')
+//       .sort({ updatedAt: -1 })
+//       .skip(skip)
+//       .limit(Number(limit));
+
+//     const total = await Project.countDocuments(filter);
+
+//     res.status(200).json({
+//       success: true,
+//       data: projects,
+//       pagination: {
+//         current: Number(page),
+//         total: Math.ceil(total / Number(limit)),
+//         count: projects.length,
+//         totalItems: total
+//       }
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error fetching projects',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
+
+// export const getProjectById = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     const userId = req.user?.id;
+
+//     const project = await Project.findOne({
+//       _id: id,
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ]
+//     })
+//       .populate('createdBy', 'name email')
+//       .populate('members', 'name email avatar')
+//       .populate('teamId', 'name description');
+
+//     if (!project) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Project not found or access denied'
+//       });
+//     }
+
+//     // Get tasks count by status
+//     const taskStats = await Task.aggregate([
+//       { $match: { projectId: project._id } },
+//       { $group: { _id: '$status', count: { $sum: 1 } } }
+//     ]);
+
+//     const stats = taskStats.reduce((acc, stat) => {
+//       acc[stat._id] = stat.count;
+//       return acc;
+//     }, {} as Record<string, number>);
+
+//     res.status(200).json({
+//       success: true,
+//       data: {
+//         ...project.toObject(),
+//         taskStats: stats
+//       }
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error fetching project',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
+
+// export const updateProject = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     const userId = req.user?.id;
+//     const updates = req.body;
+
+//     const project = await Project.findOne({
+//       _id: id,
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ]
+//     });
+
+//     if (!project) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Project not found or access denied'
+//       });
+//     }
+
+//     // Only creator or admin can update certain fields
+//     if (project.createdBy.toString() !== userId && req.user?.role !== 'admin') {
+//       const restrictedFields = ['members', 'teamId'];
+//       const hasRestrictedUpdate = restrictedFields.some(field => field in updates);
+      
+//       if (hasRestrictedUpdate) {
+//         return res.status(403).json({
+//           success: false,
+//           message: 'Insufficient permissions to update this field'
+//         });
+//       }
+//     }
+
+//     const updatedProject = await Project.findByIdAndUpdate(
+//       id,
+//       { ...updates, updatedAt: new Date() },
+//       { new: true, runValidators: true }
+//     )
+//       .populate('createdBy', 'name email')
+//       .populate('members', 'name email')
+//       .populate('teamId', 'name');
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Project updated successfully',
+//       data: updatedProject
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error updating project',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
+
+// export const deleteProject = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     const userId = req.user?.id;
+
+//     const project = await Project.findOne({
+//       _id: id,
+//       createdBy: userId
+//     });
+
+//     if (!project) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Project not found or insufficient permissions'
+//       });
+//     }
+
+//     // Delete all tasks associated with the project
+//     await Task.deleteMany({ projectId: id });
+
+//     // Remove project from team
+//     if (project.teamId) {
+//       await Team.findByIdAndUpdate(project.teamId, {
+//         $pull: { projects: id }
+//       });
+//     }
+
+//     await Project.findByIdAndDelete(id);
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Project deleted successfully'
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error deleting project',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
+
+// export const addMember = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     const { userId: memberUserId } = req.body;
+//     const currentUserId = req.user?.id;
+
+//     const project = await Project.findOne({
+//       _id: id,
+//       createdBy: currentUserId
+//     });
+
+//     if (!project) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Project not found or insufficient permissions'
+//       });
+//     }
+
+//     // Check if user exists
+//     const user = await User.findById(memberUserId);
+//     if (!user) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'User not found'
+//       });
+//     }
+
+//     // Check if user is already a member
+//     if (project.members.includes(memberUserId)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'User is already a member of this project'
+//       });
+//     }
+
+//     project.members.push(memberUserId);
+//     project.updatedAt = new Date();
+//     await project.save();
+
+//     const updatedProject = await Project.findById(id)
+//       .populate('members', 'name email avatar');
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Member added successfully',
+//       data: updatedProject
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error adding member',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
+
+// export const removeMember = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const { id, userId: memberUserId } = req.params;
+//     const currentUserId = req.user?.id;
+
+//     const project = await Project.findOne({
+//       _id: id,
+//       createdBy: currentUserId
+//     });
+
+//     if (!project) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Project not found or insufficient permissions'
+//       });
+//     }
+
+//     project.members = project.members.filter(
+//       memberId => memberId.toString() !== memberUserId
+//     );
+//     project.updatedAt = new Date();
+//     await project.save();
+
+//     const updatedProject = await Project.findById(id)
+//       .populate('members', 'name email avatar');
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Member removed successfully',
+//       data: updatedProject
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error removing member',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };

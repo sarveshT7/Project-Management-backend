@@ -1,0 +1,20 @@
+// // src/routes/dashboard.routes.ts
+// import { Router } from 'express';
+// import {
+//   getDashboardStats,
+//   getActivityFeed,
+//   getWorkload
+// } from '../controllers/dashboard.controller';
+// import { authenticate } from '../middleware/auth';
+
+// const router = Router();
+
+// // All routes require authentication
+// router.use(authenticate);
+
+// // Dashboard routes
+// router.get('/stats', getDashboardStats);
+// router.get('/activity', getActivityFeed);
+// router.get('/workload', getWorkload);
+
+// export default router;

@@ -1,0 +1,31 @@
+// // src/routes/team.routes.ts
+// import { Router } from 'express';
+// import {
+//   createTeam,
+//   getAllTeams,
+//   getTeamById,
+//   updateTeam,
+//   deleteTeam,
+//   addMember,
+//   removeMember
+// } from '../controllers/team.controller';
+// import { authenticate } from '../middleware/auth';
+// import { validate, schemas } from '../middleware/validation';
+
+// const router = Router();
+
+// // All routes require authentication
+// router.use(authenticate);
+
+// // Team CRUD routes
+// router.post('/', validate(schemas.createTeam), createTeam);
+// router.get('/', getAllTeams);
+// router.get('/:id', getTeamById);
+// router.put('/:id', validate(schemas.updateTeam), updateTeam);
+// router.delete('/:id', deleteTeam);
+
+// // Team member management
+// router.post('/:id/members', validate(schemas.addMember), addMember);
+// router.delete('/:id/members/:userId', removeMember);
+
+// export default router;

@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv'
 import { connectDB } from './config/db';
 import userRoutes from './routes/auth.route';
+import projectRoutes from './routes/project.route';
 import { connectRedis } from './config/redis';
 
 dotenv.config()
@@ -18,7 +19,8 @@ const PORT = process.env.PORT || 5000
 // initializeAuth()
 app.use(express.json())
 
-app.use('/api/v1', userRoutes)
+app.use('/api/v1/users', userRoutes)
+app.use('/api/v1/projects', projectRoutes)
 
 app.get('/', (req, res) => {
     console.log('Root route hit');

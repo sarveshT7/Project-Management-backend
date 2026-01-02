@@ -1,0 +1,21 @@
+// // src/routes/analytics.routes.ts
+// import { Router } from 'express';
+// import {
+//   getProjectAnalytics,
+//   getTeamAnalytics,
+//   getTaskAnalytics
+// } from '../controllers/analytics.controller';
+// import { authenticate } from '../middleware/auth';
+// import { validateQuery, querySchemas } from '../middleware/validation';
+
+// const router = Router();
+
+// // All routes require authentication
+// router.use(authenticate);
+
+// // Analytics routes
+// router.get('/projects', validateQuery(querySchemas.analyticsQuery), getProjectAnalytics);
+// router.get('/teams', validateQuery(querySchemas.analyticsQuery), getTeamAnalytics);
+// router.get('/tasks', validateQuery(querySchemas.analyticsQuery), getTaskAnalytics);
+
+// export default router;

@@ -1,0 +1,120 @@
+// // src/middleware/auth.ts
+// import { Request, Response, NextFunction } from 'express';
+// import jwt from 'jsonwebtoken';
+// import { User } from '../models/User';
+// import redis from '../config/redis';
+
+// interface AuthenticatedRequest extends Request {
+//   user?: {
+//     id: string;
+//     email: string;
+//     role: string;
+//   };
+// }
+
+// export const authenticate = async (
+//   req: AuthenticatedRequest,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const token = req.header('Authorization')?.replace('Bearer ', '');
+
+//     if (!token) {
+//       return res.status(401).json({
+//         success: false,
+//         message: 'Access denied. No token provided.'
+//       });
+//     }
+
+//     // Check if token is blacklisted
+//     const isBlacklisted = await redis.get(`blacklist:${token}`);
+//     if (isBlacklisted) {
+//       return res.status(401).json({
+//         success: false,
+//         message: 'Token is invalid.'
+//       });
+//     }
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    
+//     // Check if user still exists
+//     const user = await User.findById(decoded.id);
+//     if (!user) {
+//       return res.status(401).json({
+//         success: false,
+//         message: 'User not found.'
+//       });
+//     }
+
+//     req.user = {
+//       id: user._id.toString(),
+//       email: user.email,
+//       role: user.role
+//     };
+
+//     next();
+//   } catch (error) {
+//     res.status(401).json({
+//       success: false,
+//       message: 'Invalid token.'
+//     });
+//   }
+// };
+
+// export const authorize = (...roles: string[]) => {
+//   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+//     if (!req.user) {
+//       return res.status(401).json({
+//         success: false,
+//         message: 'Access denied. No user found.'
+//       });
+//     }
+
+//     if (!roles.includes(req.user.role)) {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'Access denied. Insufficient permissions.'
+//       });
+//     }
+
+//     next();
+//   };
+// };
+
+// export const optionalAuth = async (
+//   req: AuthenticatedRequest,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const token = req.header('Authorization')?.replace('Bearer ', '');
+
+//     if (!token) {
+//       return next();
+//     }
+
+//     // Check if token is blacklisted
+//     const isBlacklisted = await redis.get(`blacklist:${token}`);
+//     if (isBlacklisted) {
+//       return next();
+//     }
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    
+//     // Check if user still exists
+//     const user = await User.findById(decoded.id);
+//     if (user) {
+//       req.user = {
+//         id: user._id.toString(),
+//         email: user.email,
+//         role: user.role
+//       };
+//     }
+
+//     next();
+//   } catch (error) {
+//     // Continue without authentication
+//     next();
+//   }
+// };

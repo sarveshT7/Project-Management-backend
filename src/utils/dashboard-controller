@@ -1,0 +1,341 @@
+// // src/controllers/dashboard.controller.ts
+// import { Request, Response } from 'express';
+// import { Project } from '../models/Project';
+// import { Task } from '../models/Task';
+// import { Team } from '../models/Team';
+// import { User } from '../models/User';
+
+// interface AuthenticatedRequest extends Request {
+//   user?: {
+//     id: string;
+//     email: string;
+//     role: string;
+//   };
+// }
+
+// export const getDashboardStats = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const userId = req.user?.id;
+
+//     // Get user's projects
+//     const userProjects = await Project.find({
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ]
+//     }).select('_id');
+
+//     const projectIds = userProjects.map(p => p._id);
+
+//     // Get project counts by status
+//     const projectStats = await Project.aggregate([
+//       {
+//         $match: {
+//           $or: [
+//             { createdBy: userId },
+//             { members: userId }
+//           ]
+//         }
+//       },
+//       {
+//         $group: {
+//           _id: '$status',
+//           count: { $sum: 1 }
+//         }
+//       }
+//     ]);
+
+//     // Get task counts by status
+//     const taskStats = await Task.aggregate([
+//       {
+//         $match: {
+//           projectId: { $in: projectIds }
+//         }
+//       },
+//       {
+//         $group: {
+//           _id: '$status',
+//           count: { $sum: 1 }
+//         }
+//       }
+//     ]);
+
+//     // Get tasks assigned to user
+//     const myTaskStats = await Task.aggregate([
+//       {
+//         $match: {
+//           assignedTo: userId,
+//           projectId: { $in: projectIds }
+//         }
+//       },
+//       {
+//         $group: {
+//           _id: '$status',
+//           count: { $sum: 1 }
+//         }
+//       }
+//     ]);
+
+//     // Get team count
+//     const teamCount = await Team.countDocuments({
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ]
+//     });
+
+//     // Get recent tasks (assigned to user)
+//     const recentTasks = await Task.find({
+//       assignedTo: userId,
+//       projectId: { $in: projectIds }
+//     })
+//       .populate('projectId', 'name')
+//       .sort({ updatedAt: -1 })
+//       .limit(5);
+
+//     // Get overdue tasks
+//     const overdueTasks = await Task.find({
+//       assignedTo: userId,
+//       projectId: { $in: projectIds },
+//       deadline: { $lt: new Date() },
+//       status: { $ne: 'done' }
+//     })
+//       .populate('projectId', 'name')
+//       .sort({ deadline: 1 })
+//       .limit(10);
+
+//     // Get recent projects
+//     const recentProjects = await Project.find({
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ]
+//     })
+//       .populate('createdBy', 'name email')
+//       .sort({ updatedAt: -1 })
+//       .limit(5);
+
+//     // Format stats
+//     const formatStats = (stats: any[]) => {
+//       return stats.reduce((acc, stat) => {
+//         acc[stat._id] = stat.count;
+//         return acc;
+//       }, {} as Record<string, number>);
+//     };
+
+//     const formattedProjectStats = formatStats(projectStats);
+//     const formattedTaskStats = formatStats(taskStats);
+//     const formattedMyTaskStats = formatStats(myTaskStats);
+
+//     // Calculate totals
+//     const totalProjects = Object.values(formattedProjectStats).reduce((sum: number, count: number) => sum + count, 0);
+//     const totalTasks = Object.values(formattedTaskStats).reduce((sum: number, count: number) => sum + count, 0);
+//     const totalMyTasks = Object.values(formattedMyTaskStats).reduce((sum: number, count: number) => sum + count, 0);
+
+//     res.status(200).json({
+//       success: true,
+//       data: {
+//         overview: {
+//           totalProjects,
+//           totalTasks,
+//           totalMyTasks,
+//           totalTeams: teamCount,
+//           overdueTasksCount: overdueTasks.length
+//         },
+//         projectStats: {
+//           total: totalProjects,
+//           planning: formattedProjectStats.planning || 0,
+//           active: formattedProjectStats.active || 0,
+//           completed: formattedProjectStats.completed || 0,
+//           onHold: formattedProjectStats['on-hold'] || 0
+//         },
+//         taskStats: {
+//           total: totalTasks,
+//           todo: formattedTaskStats.todo || 0,
+//           'in-progress': formattedTaskStats['in-progress'] || 0,
+//           review: formattedTaskStats.review || 0,
+//           done: formattedTaskStats.done || 0
+//         },
+//         myTaskStats: {
+//           total: totalMyTasks,
+//           todo: formattedMyTaskStats.todo || 0,
+//           'in-progress': formattedMyTaskStats['in-progress'] || 0,
+//           review: formattedMyTaskStats.review || 0,
+//           done: formattedMyTaskStats.done || 0
+//         },
+//         recentTasks,
+//         overdueTasks,
+//         recentProjects
+//       }
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error fetching dashboard stats',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
+
+// export const getActivityFeed = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const userId = req.user?.id;
+//     const { page = 1, limit = 20 } = req.query;
+
+//     // Get user's projects
+//     const userProjects = await Project.find({
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ]
+//     }).select('_id');
+
+//     const projectIds = userProjects.map(p => p._id);
+
+//     // Get recent tasks updates
+//     const recentTasks = await Task.find({
+//       projectId: { $in: projectIds },
+//       updatedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+//     })
+//       .populate('assignedTo', 'name email avatar')
+//       .populate('createdBy', 'name email avatar')
+//       .populate('projectId', 'name')
+//       .sort({ updatedAt: -1 })
+//       .limit(Number(limit));
+
+//     // Get recent projects updates
+//     const recentProjects = await Project.find({
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ],
+//       updatedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+//     })
+//       .populate('createdBy', 'name email avatar')
+//       .sort({ updatedAt: -1 })
+//       .limit(Number(limit));
+
+//     // Combine and sort activities
+//     const activities = [
+//       ...recentTasks.map(task => ({
+//         type: 'task',
+//         action: 'updated',
+//         item: task,
+//         timestamp: task.updatedAt
+//       })),
+//       ...recentProjects.map(project => ({
+//         type: 'project',
+//         action: 'updated',
+//         item: project,
+//         timestamp: project.updatedAt
+//       }))
+//     ]
+//       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+//       .slice(0, Number(limit));
+
+//     res.status(200).json({
+//       success: true,
+//       data: activities
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error fetching activity feed',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
+
+// export const getWorkload = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const userId = req.user?.id;
+
+//     // Get user's projects
+//     const userProjects = await Project.find({
+//       $or: [
+//         { createdBy: userId },
+//         { members: userId }
+//       ]
+//     }).select('_id');
+
+//     const projectIds = userProjects.map(p => p._id);
+
+//     // Get tasks by priority assigned to user
+//     const tasksByPriority = await Task.aggregate([
+//       {
+//         $match: {
+//           assignedTo: userId,
+//           projectId: { $in: projectIds },
+//           status: { $ne: 'done' }
+//         }
+//       },
+//       {
+//         $group: {
+//           _id: '$priority',
+//           count: { $sum: 1 },
+//           tasks: { $push: '$$ROOT' }
+//         }
+//       }
+//     ]);
+
+//     // Get upcoming deadlines (next 7 days)
+//     const upcomingDeadlines = await Task.find({
+//       assignedTo: userId,
+//       projectId: { $in: projectIds },
+//       deadline: {
+//         $gte: new Date(),
+//         $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+//       },
+//       status: { $ne: 'done' }
+//     })
+//       .populate('projectId', 'name')
+//       .sort({ deadline: 1 });
+
+//     // Get completion rate (last 30 days)
+//     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    
+//     const completedTasks = await Task.countDocuments({
+//       assignedTo: userId,
+//       projectId: { $in: projectIds },
+//       status: 'done',
+//       completedAt: { $gte: thirtyDaysAgo }
+//     });
+
+//     const totalTasksLast30Days = await Task.countDocuments({
+//       assignedTo: userId,
+//       projectId: { $in: projectIds },
+//       createdAt: { $gte: thirtyDaysAgo }
+//     });
+
+//     const completionRate = totalTasksLast30Days > 0 
+//       ? Math.round((completedTasks / totalTasksLast30Days) * 100) 
+//       : 0;
+
+//     // Format priority data
+//     const priorityStats = tasksByPriority.reduce((acc, item) => {
+//       acc[item._id] = item.count;
+//       return acc;
+//     }, {} as Record<string, number>);
+
+//     res.status(200).json({
+//       success: true,
+//       data: {
+//         priorityBreakdown: {
+//           high: priorityStats.high || 0,
+//           medium: priorityStats.medium || 0,
+//           low: priorityStats.low || 0
+//         },
+//         upcomingDeadlines,
+//         completionRate,
+//         totalActiveTasks: Object.values(priorityStats).reduce((sum: number, count: number) => sum + count, 0),
+//         completedTasksLast30Days: completedTasks
+//       }
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error fetching workload',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };

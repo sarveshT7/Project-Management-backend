@@ -1,0 +1,31 @@
+// // src/routes/project.routes.ts
+// import { Router } from 'express';
+// import {
+//   createProject,
+//   getAllProjects,
+//   getProjectById,
+//   updateProject,
+//   deleteProject,
+//   addMember,
+//   removeMember
+// } from '../controllers/project.controller';
+// import { authenticate } from '../middleware/auth';
+// import { validate, validateParams, validateQuery, schemas, paramSchemas, querySchemas } from '../middleware/validation';
+
+// const router = Router();
+
+// // All routes require authentication
+// router.use(authenticate);
+
+// // Project CRUD routes
+// router.post('/', validate(schemas.createProject), createProject);
+// router.get('/', validateQuery(querySchemas.projectsQuery), getAllProjects);
+// router.get('/:id', validateParams(paramSchemas.objectId), getProjectById);
+// router.put('/:id', validateParams(paramSchemas.objectId), validate(schemas.updateProject), updateProject);
+// router.delete('/:id', validateParams(paramSchemas.objectId), deleteProject);
+
+// // Project member management
+// router.post('/:id/members', validateParams(paramSchemas.objectId), validate(schemas.addMember), addMember);
+// router.delete('/:id/members/:userId', validateParams(paramSchemas.teamMember), removeMember);
+
+// export default router;
